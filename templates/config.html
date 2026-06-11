@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="glass-card" style="margin-bottom: 2rem;">
+    <h2>Add New Check</h2>
+    <form id="config-form" style="margin-top: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="c_name" class="form-control" required>
+        </div>
+        <div class="form-group">
+            <label>Category</label>
+            <select id="c_category" class="form-control" required>
+                <!-- populated by JS -->
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Host</label>
+            <input type="text" id="c_host" class="form-control" value="localhost" required>
+        </div>
+        <div class="form-group">
+            <label>Target Path (Log file or Process name)</label>
+            <input type="text" id="c_target" class="form-control" required>
+        </div>
+        <div class="form-group">
+            <label>Search Pattern (for Logs)</label>
+            <input type="text" id="c_pattern" class="form-control">
+        </div>
+        <div class="form-group">
+            <label>SSH User (for remote)</label>
+            <input type="text" id="c_ssh_user" class="form-control">
+        </div>
+        <div class="form-group">
+            <label>SSH Key Path (for remote)</label>
+            <input type="text" id="c_ssh_key" class="form-control" placeholder="~/.ssh/id_rsa">
+        </div>
+        
+        <div class="form-group" style="grid-column: span 2; display: flex; gap: 1rem; align-items: center;">
+            <input type="checkbox" id="c_scheduled"> <label style="margin:0;">Enable Scheduling</label>
+        </div>
+        <div class="form-group">
+            <label>Schedule Type</label>
+            <select id="c_schedule_type" class="form-control">
+                <option value="hourly">Hourly</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+            </select>
+        </div>
+        <div class="form-group" style="grid-column: span 2;">
+            <button type="submit" class="btn btn-primary">Save Check</button>
+        </div>
+    </form>
+</div>
+
+<div class="glass-card">
+    <h2>Configured Checks</h2>
+    <div style="overflow-x: auto;">
+        <table id="checks-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Host</th>
+                    <th>Target</th>
+                    <th>Schedule</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- populated by js -->
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="glass-card">
+    <h2>Execution History</h2>
+    <p>Last 30 days of check results</p>
+    
+    <div style="overflow-x: auto;">
+        <table id="history-table">
+            <thead>
+                <tr>
+                    <th>Execution Time</th>
+                    <th>Check Name</th>
+                    <th>Status</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- populated by js -->
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

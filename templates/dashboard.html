@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="overall-status-container" class="glass-card overall-status">
+    <h3>Overall System Status</h3>
+    <h2 id="overall-status-text">Loading...</h2>
+    <p id="overall-status-sub">Checking all configured services</p>
+</div>
+
+<div class="dashboard-grid" id="checks-grid">
+    <!-- Check cards will be injected here via JS -->
+</div>
+{% endblock %}
