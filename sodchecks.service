@@ -1,0 +1,26 @@
+[Unit]
+Description=SODChecks Web Application and Scheduler
+After=network.target
+
+[Service]
+# It is highly recommended to run this service as a dedicated non-root user
+User=sodadmin
+Group=sodadmin
+WorkingDirectory=/opt/sodchecks
+Environment="PATH=/opt/sodchecks/venv/bin"
+# Generate a secure random string and replace the placeholder below before deployment
+Environment="FLASK_SECRET_KEY=replace_with_secure_random_string_in_prod"
+
+ExecStart=/opt/sodchecks/venv/bin/gunicorn -c gunicorn.conf.py "app:create_app()"
+
+# Security Hardening for RHEL 8
+Restart=always
+RestartSec=3
+NoNewPrivileges=yes
+PrivateTmp=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

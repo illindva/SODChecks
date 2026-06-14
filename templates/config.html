@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="glass-card" style="margin-bottom: 2rem;">
-    <h2>Add New Check</h2>
-    <form id="config-form" style="margin-top: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+<div class="formal-card" style="margin-bottom: 2rem;">
+    <h2 id="form-title" style="border-bottom: 1px solid var(--card-border); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">Add New Check</h2>
+    <form id="config-form" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        <input type="hidden" id="c_id">
         <div class="form-group">
             <label>Name</label>
             <input type="text" id="c_name" class="form-control" required>
@@ -12,6 +13,24 @@
             <label>Category</label>
             <select id="c_category" class="form-control" required>
                 <!-- populated by JS -->
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Dashboard</label>
+            <select id="c_dashboard" class="form-control" required>
+                <option value="US SOD">US SOD</option>
+                <option value="SLIM HC">SLIM HC</option>
+            </select>
+        </div>
+        <div class="form-group" style="grid-column: span 2;">
+            <label>Description</label>
+            <input type="text" id="c_description" class="form-control" placeholder="Brief description of what this check does">
+        </div>
+        <div class="form-group">
+            <label>OS Type</label>
+            <select id="c_os_type" class="form-control" required>
+                <option value="linux">Linux</option>
+                <option value="windows">Windows</option>
             </select>
         </div>
         <div class="form-group">
@@ -30,41 +49,69 @@
             <label>SSH User (for remote)</label>
             <input type="text" id="c_ssh_user" class="form-control">
         </div>
-        <div class="form-group">
-            <label>SSH Key Path (for remote)</label>
+        <div class="form-group" id="group_ssh_key">
+            <label>SSH Key Path (Linux remote)</label>
             <input type="text" id="c_ssh_key" class="form-control" placeholder="~/.ssh/id_rsa">
         </div>
+        <div class="form-group" id="group_password" style="display: none;">
+            <label>Password (Windows remote)</label>
+            <input type="password" id="c_password" class="form-control" placeholder="Leave blank to keep existing">
+        </div>
         
-        <div class="form-group" style="grid-column: span 2; display: flex; gap: 1rem; align-items: center;">
-            <input type="checkbox" id="c_scheduled"> <label style="margin:0;">Enable Scheduling</label>
+        <div class="form-group" style="grid-column: span 2; display: flex; gap: 1rem; align-items: center; background: #f9fafb; padding: 1rem; border-radius: 4px; border: 1px solid var(--card-border);">
+            <input type="checkbox" id="c_scheduled" style="width: 1.25rem; height: 1.25rem; cursor: pointer;">
+            <label style="margin:0; font-weight: 600;">Enable Scheduling</label>
         </div>
-        <div class="form-group">
-            <label>Schedule Type</label>
-            <select id="c_schedule_type" class="form-control">
-                <option value="hourly">Hourly</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-            </select>
+        
+        <div class="form-group" id="schedule_options" style="grid-column: span 2; display: none; background: #ffffff; padding: 1rem; border: 1px solid var(--card-border); border-radius: 4px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <label>Schedule Type</label>
+                    <select id="c_schedule_type" class="form-control">
+                        <option value="hourly">Hourly</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="custom_cron">Custom</option>
+                    </select>
+                </div>
+                <div id="granular_options" style="display: flex; gap: 1rem; align-items: flex-end;">
+                    <div style="flex: 1;">
+                        <label>Execute at Hour (0-23)</label>
+                        <input type="number" id="c_sched_hour" class="form-control" min="0" max="23" value="0">
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Days to run</label>
+                        <select id="c_sched_days" class="form-control">
+                            <option value="*">Everyday</option>
+                            <option value="mon-fri">Weekdays (Mon-Fri)</option>
+                            <option value="sat,sun">Weekends</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="form-group" style="grid-column: span 2;">
-            <button type="submit" class="btn btn-primary">Save Check</button>
+
+        <div class="form-group" style="grid-column: span 2; padding-top: 1rem; border-top: 1px solid var(--card-border); text-align: right;">
+            <button type="button" class="btn btn-danger" id="btn-cancel-edit" style="display:none; margin-right: 1rem;">Cancel Edit</button>
+            <button type="submit" class="btn btn-primary" id="btn-save" style="padding: 0.6rem 1.5rem;">Save Check</button>
         </div>
     </form>
 </div>
 
-<div class="glass-card">
-    <h2>Configured Checks</h2>
-    <div style="overflow-x: auto;">
+<div class="formal-card">
+    <h2 style="border-bottom: 1px solid var(--card-border); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">Configured Checks</h2>
+    <div class="table-responsive">
         <table id="checks-table">
             <thead>
                 <tr>
                     <th>ID</th>
                     <th>Name</th>
+                    <th>OS</th>
                     <th>Category</th>
                     <th>Host</th>
                     <th>Target</th>
                     <th>Schedule</th>
-                    <th>Actions</th>
+                    <th style="text-align: right;">Actions</th>
                 </tr>
             </thead>
             <tbody>

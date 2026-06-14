@@ -1,11 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="glass-card">
-    <h2>Execution History</h2>
-    <p>Last 30 days of check results</p>
+<div class="formal-card">
+    <div style="border-bottom: 1px solid var(--card-border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: baseline;">
+        <h2 style="margin: 0;">Execution History</h2>
+        <span style="color: var(--text-secondary); font-size: 0.875rem;">Last 30 days of check results</span>
+    </div>
     
-    <div style="overflow-x: auto;">
+    <div class="table-responsive">
         <table id="history-table">
             <thead>
                 <tr>

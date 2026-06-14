@@ -1,10 +1,12 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div id="overall-status-container" class="glass-card overall-status">
-    <h3>Overall System Status</h3>
-    <h2 id="overall-status-text">Loading...</h2>
-    <p id="overall-status-sub">Checking all configured services</p>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 0.5rem;">
+    <div>
+        <h2 style="color: var(--text-primary); font-weight: 700; font-size: 2rem; margin: 0;">Dashboards Overview</h2>
+        <p style="color: var(--text-secondary); margin-top: 0.5rem;">Select a dashboard below to view detailed health checks.</p>
+    </div>
+    <button class="btn btn-primary" onclick="sendEmailReport(null)">Send Email Report</button>
 </div>
 
 <div class="dashboard-grid" id="checks-grid">
