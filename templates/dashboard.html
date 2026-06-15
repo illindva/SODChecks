@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 0.5rem;">
+    <div>
+        <h2 style="color: var(--text-primary); font-weight: 700; font-size: 2rem; margin: 0;">Dashboards Overview</h2>
+        <p style="color: var(--text-secondary); margin-top: 0.5rem;">Select a dashboard below to view detailed health checks.</p>
+    </div>
+    <button class="btn btn-primary" onclick="sendEmailReport(null)">Send Email Report</button>
+</div>
+
+<div class="dashboard-grid" id="checks-grid">
+    <!-- Check cards will be injected here via JS -->
+</div>
+{% endblock %}

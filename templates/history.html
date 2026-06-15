@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="formal-card">
+    <div style="border-bottom: 1px solid var(--card-border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: baseline;">
+        <h2 style="margin: 0;">Execution History</h2>
+        <span style="color: var(--text-secondary); font-size: 0.875rem;">Last 30 days of check results</span>
+    </div>
+    
+    <div class="table-responsive">
+        <table id="history-table">
+            <thead>
+                <tr>
+                    <th>Execution Time</th>
+                    <th>Check Name</th>
+                    <th>Status</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- populated by js -->
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

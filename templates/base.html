@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppAssistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <nav class="corporate-nav">
+        <div class="nav-container">
+            <div class="logo">
+                <a href="/"
+                    style="display: flex; align-items: center; text-decoration: none; color: inherit; gap: 0.75rem;">
+                    <!-- Placeholder for your company image. Drop your logo as 'company_logo.png' in the static/image/ directory -->
+                    <img src="{{ url_for('static', filename='image/AskiTech2.png') }}" alt="AskiTech"
+                        style="height: 28px; width: auto; object-fit: contain;">
+                    AppAssistant
+                </a>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/">Dashboard</a></li>
+                <li><a href="/config">Configuration</a></li>
+                <li><a href="/history">History</a></li>
+            </ul>
+        </div>
+    </nav>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>

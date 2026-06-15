@@ -1,0 +1,8 @@
+venv/
+venv_sodchecks/
+__pycache__/
+*.pyc
+.env
+healthchecks.db
+*.log
+.DS_Store
