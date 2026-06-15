@@ -1,7 +1,7 @@
 import os
 import logging
 from flask import Flask, render_template, request, jsonify
-from models import db, Category, HealthCheck, CheckResult
+from models import db, Category, HealthCheck, CheckResult, init_db
 import runners
 from scheduler_setup import init_scheduler, sync_scheduler, scheduler
 from datetime import datetime, timedelta
@@ -31,22 +31,8 @@ def create_app():
     
     db.init_app(app)
     
-    with app.app_context():
-        db.create_all()
-        if not Category.query.first():
-            db.session.add(Category(name='log_pattern', description='Verify specific log pattern to derive status'))
-            db.session.add(Category(name='process_stats', description='Verify specific process (PID/Name) for uptime and memory'))
-            db.session.add(Category(name='send_email_sample', description='Send an email with dashboard stats'))
-            db.session.add(Category(name='teams_notification_sample', description='Send a Teams chat notification using curl'))
-            db.session.add(Category(name='linux_command_sample', description='Connect to Linux host and run a command'))
-            db.session.add(Category(name='windows_command_sample', description='Connect to Windows host and run a command from CMD'))
-            db.session.add(Category(name='json_to_html_sample', description='Convert JSON to HTML table'))
-            db.session.add(Category(name='html_to_json_sample', description='Convert HTML table to JSON'))
-            db.session.add(Category(name='oracle_query_sample', description='Run an Oracle query and output HTML table'))
-            db.session.add(Category(name='sybase_query_sample', description='Run a Sybase query and output HTML table'))
-            db.session.add(Category(name='mssql_query_sample', description='Run an MSSQL query and output HTML table'))
-            db.session.add(Category(name='gemfire_oql_sample', description='Run a GemFire OQL query via REST API and output HTML table'))
-            db.session.commit()
+    # Initialize DB and create all objects/categories
+    init_db(app)
             
     # Initialize scheduler
     # When using Flask's reloader, it spawns two processes. We only want the scheduler to run in the worker process.
