@@ -334,25 +334,25 @@ def execute_check(check: HealthCheck):
         runner = LogPatternCheckRunner(check)
     elif category_name == 'process_stats':
         runner = ProcessCheckRunner(check)
-    elif category_name == 'send_email_sample':
+    elif category_name == 'send_email':
         runner = EmailCheckRunner(check)
-    elif category_name == 'teams_notification_sample':
+    elif category_name == 'teams_notification':
         runner = TeamsNotificationCheckRunner(check)
-    elif category_name == 'linux_command_sample':
+    elif category_name == 'linux_command':
         runner = LinuxCommandCheckRunner(check)
-    elif category_name == 'windows_command_sample':
+    elif category_name == 'windows_command':
         runner = WindowsCommandCheckRunner(check)
-    elif category_name == 'json_to_html_sample':
+    elif category_name == 'json_to_html':
         runner = JsonToHtmlCheckRunner(check)
-    elif category_name == 'html_to_json_sample':
+    elif category_name == 'html_to_json':
         runner = HtmlToJsonCheckRunner(check)
-    elif category_name == 'oracle_query_sample':
+    elif category_name == 'oracle_query':
         runner = OracleQueryCheckRunner(check)
-    elif category_name == 'mssql_query_sample':
+    elif category_name == 'mssql_query':
         runner = MssqlQueryCheckRunner(check)
-    elif category_name == 'sybase_query_sample':
+    elif category_name == 'sybase_query':
         runner = SybaseQueryCheckRunner(check)
-    elif category_name == 'gemfire_oql_sample':
+    elif category_name == 'gemfire_oql':
         runner = GemfireOqlCheckRunner(check)
     else:
         return "ERROR", f"Unknown category: {category_name}", {}

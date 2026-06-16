@@ -86,22 +86,32 @@ def init_db(app):
                             conn.execute(db.text(f"ALTER TABLE health_check ADD COLUMN {col_name} {col_type}"))
                         except Exception as e:
                             app.logger.warning(f"Failed to add column {col_name}: {e}")
+                            
+            # Update existing categories to remove _sample
+            try:
+                with engine.connect() as conn:
+                    # In SQLAlchemy 2.0, execute requires a commit or is auto-committed for certain ops depending on context.
+                    # Since this is DML, we should commit if not autocommit.
+                    conn.execute(db.text("UPDATE category SET name = REPLACE(name, '_sample', '') WHERE name LIKE '%_sample'"))
+                    conn.commit()
+            except Exception as e:
+                app.logger.warning(f"Failed to update existing category names: {e}")
         
         # Insert default categories if they don't exist
         if not Category.query.first():
             categories = [
                 ('log_pattern', 'Verify specific log pattern to derive status'),
                 ('process_stats', 'Verify specific process (PID/Name) for uptime and memory'),
-                ('send_email_sample', 'Send an email with dashboard stats'),
-                ('teams_notification_sample', 'Send a Teams chat notification using curl'),
-                ('linux_command_sample', 'Connect to Linux host and run a command'),
-                ('windows_command_sample', 'Connect to Windows host and run a command from CMD'),
-                ('json_to_html_sample', 'Convert JSON to HTML table'),
-                ('html_to_json_sample', 'Convert HTML table to JSON'),
-                ('oracle_query_sample', 'Run an Oracle query and output HTML table'),
-                ('sybase_query_sample', 'Run a Sybase query and output HTML table'),
-                ('mssql_query_sample', 'Run an MSSQL query and output HTML table'),
-                ('gemfire_oql_sample', 'Run a GemFire OQL query via REST API and output HTML table')
+                ('send_email', 'Send an email with dashboard stats'),
+                ('teams_notification', 'Send a Teams chat notification using curl'),
+                ('linux_command', 'Connect to Linux host and run a command'),
+                ('windows_command', 'Connect to Windows host and run a command from CMD'),
+                ('json_to_html', 'Convert JSON to HTML table'),
+                ('html_to_json', 'Convert HTML table to JSON'),
+                ('oracle_query', 'Run an Oracle query and output HTML table'),
+                ('sybase_query', 'Run a Sybase query and output HTML table'),
+                ('mssql_query', 'Run an MSSQL query and output HTML table'),
+                ('gemfire_oql', 'Run a GemFire OQL query via REST API and output HTML table')
             ]
             
             for name, description in categories:

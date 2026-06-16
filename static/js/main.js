@@ -97,6 +97,8 @@ async function loadConfigPage() {
     const categories = await catRes.json();
     const catSelect = document.getElementById('c_category');
     categories.forEach(c => {
+        if (['json_to_html', 'html_to_json'].includes(c.name)) return;
+        
         const opt = document.createElement('option');
         opt.value = c.name;
         opt.innerText = c.name;
@@ -105,17 +107,16 @@ async function loadConfigPage() {
 
     // UI Toggles
     const osSelect = document.getElementById('c_os_type');
-    const keyGroup = document.getElementById('group_ssh_key');
-    const pwdGroup = document.getElementById('group_password');
     osSelect.addEventListener('change', () => {
-        if (osSelect.value === 'windows') {
-            keyGroup.style.display = 'none';
-            pwdGroup.style.display = 'block';
-        } else {
-            keyGroup.style.display = 'block';
-            pwdGroup.style.display = 'none';
-        }
+        updateFieldsForCategory(catSelect.value);
     });
+
+    catSelect.addEventListener('change', () => {
+        updateFieldsForCategory(catSelect.value);
+    });
+    
+    // Initial call
+    setTimeout(() => updateFieldsForCategory(catSelect.value), 100);
 
     const schedCheck = document.getElementById('c_scheduled');
     const schedOpts = document.getElementById('schedule_options');
@@ -182,6 +183,44 @@ async function loadConfigPage() {
         }
     });
 
+    document.getElementById('btn-test-connection').addEventListener('click', async () => {
+        const payload = {
+            id: document.getElementById('c_id').value,
+            category: document.getElementById('c_category').value,
+            os_type: document.getElementById('c_os_type').value,
+            host: document.getElementById('c_host').value,
+            target_path: document.getElementById('c_target').value,
+            search_pattern: document.getElementById('c_pattern').value,
+            ssh_user: document.getElementById('c_ssh_user').value,
+            ssh_key_path: document.getElementById('c_ssh_key').value,
+            password: document.getElementById('c_password').value
+        };
+        
+        const btn = document.getElementById('btn-test-connection');
+        const origText = btn.innerText;
+        btn.innerText = 'Testing...';
+        btn.disabled = true;
+        
+        try {
+            const res = await fetch('/api/test_connection', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(`Test Connection: ${data.status}\nMessage: ${data.message}`);
+            } else {
+                alert(`Test Connection Failed: ${data.error || 'Unknown error'}`);
+            }
+        } catch(err) {
+            alert('Failed to test connection');
+        } finally {
+            btn.innerText = origText;
+            btn.disabled = false;
+        }
+    });
+
     loadChecksTable();
 }
 
@@ -193,9 +232,8 @@ function resetForm() {
     document.getElementById('form-title').innerText = 'Add New Check';
     document.getElementById('btn-save').innerText = 'Save Check';
     document.getElementById('btn-cancel-edit').style.display = 'none';
-    document.getElementById('group_ssh_key').style.display = 'block';
-    document.getElementById('group_password').style.display = 'none';
     document.getElementById('schedule_options').style.display = 'none';
+    updateFieldsForCategory(document.getElementById('c_category').value);
 }
 
 window.editCheck = function(id) {
@@ -218,13 +256,7 @@ window.editCheck = function(id) {
     document.getElementById('c_scheduled').checked = check.is_scheduled;
     document.getElementById('schedule_options').style.display = check.is_scheduled ? 'block' : 'none';
     
-    if (check.os_type === 'windows') {
-        document.getElementById('group_ssh_key').style.display = 'none';
-        document.getElementById('group_password').style.display = 'block';
-    } else {
-        document.getElementById('group_ssh_key').style.display = 'block';
-        document.getElementById('group_password').style.display = 'none';
-    }
+    updateFieldsForCategory(check.category_name);
     
     document.getElementById('form-title').innerText = 'Edit Check: ' + check.name;
     document.getElementById('btn-save').innerText = 'Update Check';
@@ -306,5 +338,110 @@ async function sendEmailReport(dashboardName) {
         }
     } catch (e) {
         alert("Failed to send report request.");
+    }
+}
+
+function updateFieldsForCategory(category) {
+    const groupOsType = document.getElementById('group_os_type');
+    const groupHost = document.getElementById('group_host');
+    const groupTarget = document.getElementById('group_target');
+    const groupPattern = document.getElementById('group_pattern');
+    const groupSshUser = document.getElementById('group_ssh_user');
+    const groupSshKey = document.getElementById('group_ssh_key');
+    const groupPassword = document.getElementById('group_password');
+
+    const lblHost = document.getElementById('label_host');
+    const lblTarget = document.getElementById('label_target');
+    const lblPattern = document.getElementById('label_pattern');
+    const lblSshUser = document.getElementById('label_ssh_user');
+    const lblPassword = document.getElementById('label_password');
+
+    // Default: Reset everything to visible
+    groupOsType.style.display = 'block';
+    groupHost.style.display = 'block';
+    groupTarget.style.display = 'block';
+    groupPattern.style.display = 'block';
+    groupSshUser.style.display = 'block';
+    groupSshKey.style.display = 'block';
+    groupPassword.style.display = 'none';
+
+    // Default labels
+    lblHost.innerText = 'Host';
+    lblTarget.innerText = 'Target Path (Log file or Process name)';
+    lblPattern.innerText = 'Search Pattern (for Logs)';
+    lblSshUser.innerText = 'SSH User (for remote)';
+    lblPassword.innerText = 'Password (Windows remote)';
+
+    // Handle OS specific toggles for standard checks
+    const osVal = document.getElementById('c_os_type').value;
+    if (osVal === 'windows') {
+        groupSshKey.style.display = 'none';
+        groupPassword.style.display = 'block';
+    }
+
+    if (category === 'linux_command') {
+        groupOsType.style.display = 'none';
+        groupPattern.style.display = 'none';
+        groupPassword.style.display = 'none';
+        groupSshKey.style.display = 'block';
+        lblTarget.innerText = 'Linux Command to Execute';
+    } 
+    else if (category === 'windows_command') {
+        groupOsType.style.display = 'none';
+        groupPattern.style.display = 'none';
+        groupSshKey.style.display = 'none';
+        groupPassword.style.display = 'block';
+        lblTarget.innerText = 'CMD Command to Execute';
+    }
+    else if (category === 'gemfire_oql') {
+        groupOsType.style.display = 'none';
+        groupTarget.style.display = 'none';
+        groupSshKey.style.display = 'none';
+        groupPassword.style.display = 'block';
+        lblHost.innerText = 'GemFire REST API URL (e.g. http://server:8080)';
+        lblPattern.innerText = 'OQL Query';
+        lblSshUser.innerText = 'API Username';
+        lblPassword.innerText = 'API Password';
+    }
+    else if (['oracle_query', 'mssql_query', 'sybase_query'].includes(category)) {
+        groupOsType.style.display = 'none';
+        groupSshKey.style.display = 'none';
+        groupPassword.style.display = 'block';
+        lblHost.innerText = 'DB Host:Port (e.g. localhost:1521)';
+        lblTarget.innerText = category === 'oracle_query' ? 'DB Service Name' : 'Database Name';
+        lblSshUser.innerText = 'DB User';
+        lblPassword.innerText = 'DB Password';
+        lblPattern.innerText = 'SQL Query';
+    }
+    else if (category === 'process_stats') {
+        groupPattern.style.display = 'none';
+        lblTarget.innerText = 'Process Name or PID';
+    }
+    else if (category === 'send_email') {
+        groupOsType.style.display = 'none';
+        groupHost.style.display = 'none';
+        groupPattern.style.display = 'none';
+        groupSshUser.style.display = 'none';
+        groupSshKey.style.display = 'none';
+        groupPassword.style.display = 'none';
+        lblTarget.innerText = 'Recipient Emails (Comma-separated)';
+    }
+    else if (category === 'teams_notification') {
+        groupOsType.style.display = 'none';
+        groupHost.style.display = 'none';
+        groupTarget.style.display = 'none';
+        groupSshUser.style.display = 'none';
+        groupSshKey.style.display = 'none';
+        groupPassword.style.display = 'none';
+        lblPattern.innerText = 'Message Text';
+    }
+    else if (['json_to_html', 'html_to_json'].includes(category)) {
+        groupOsType.style.display = 'none';
+        groupHost.style.display = 'none';
+        groupTarget.style.display = 'none';
+        groupSshUser.style.display = 'none';
+        groupSshKey.style.display = 'none';
+        groupPassword.style.display = 'none';
+        lblPattern.innerText = category === 'json_to_html' ? 'JSON Input String' : 'HTML Input String';
     }
 }

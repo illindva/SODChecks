@@ -26,35 +26,35 @@
             <label>Description</label>
             <input type="text" id="c_description" class="form-control" placeholder="Brief description of what this check does">
         </div>
-        <div class="form-group">
-            <label>OS Type</label>
+        <div class="form-group" id="group_os_type">
+            <label id="label_os_type">OS Type</label>
             <select id="c_os_type" class="form-control" required>
                 <option value="linux">Linux</option>
                 <option value="windows">Windows</option>
             </select>
         </div>
-        <div class="form-group">
-            <label>Host</label>
+        <div class="form-group" id="group_host">
+            <label id="label_host">Host</label>
             <input type="text" id="c_host" class="form-control" value="localhost" required>
         </div>
-        <div class="form-group">
-            <label>Target Path (Log file or Process name)</label>
-            <input type="text" id="c_target" class="form-control" required>
+        <div class="form-group" id="group_target">
+            <label id="label_target">Target Path (Log file or Process name)</label>
+            <input type="text" id="c_target" class="form-control">
         </div>
-        <div class="form-group">
-            <label>Search Pattern (for Logs)</label>
+        <div class="form-group" id="group_pattern">
+            <label id="label_pattern">Search Pattern (for Logs)</label>
             <input type="text" id="c_pattern" class="form-control">
         </div>
-        <div class="form-group">
-            <label>SSH User (for remote)</label>
+        <div class="form-group" id="group_ssh_user">
+            <label id="label_ssh_user">SSH User (for remote)</label>
             <input type="text" id="c_ssh_user" class="form-control">
         </div>
         <div class="form-group" id="group_ssh_key">
-            <label>SSH Key Path (Linux remote)</label>
+            <label id="label_ssh_key">SSH Key Path (Linux remote)</label>
             <input type="text" id="c_ssh_key" class="form-control" placeholder="~/.ssh/id_rsa">
         </div>
         <div class="form-group" id="group_password" style="display: none;">
-            <label>Password (Windows remote)</label>
+            <label id="label_password">Password (Windows remote)</label>
             <input type="password" id="c_password" class="form-control" placeholder="Leave blank to keep existing">
         </div>
         
@@ -92,6 +92,7 @@
         </div>
 
         <div class="form-group" style="grid-column: span 2; padding-top: 1rem; border-top: 1px solid var(--card-border); text-align: right;">
+            <button type="button" class="btn" id="btn-test-connection" style="margin-right: 1rem; background-color: #6b7280; color: white;">Test Connection</button>
             <button type="button" class="btn btn-danger" id="btn-cancel-edit" style="display:none; margin-right: 1rem;">Cancel Edit</button>
             <button type="submit" class="btn btn-primary" id="btn-save" style="padding: 0.6rem 1.5rem;">Save Check</button>
         </div>

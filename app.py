@@ -196,6 +196,40 @@ def create_app():
             "metrics": metrics
         })
 
+    @app.route('/api/test_connection', methods=['POST'])
+    def test_connection():
+        data = request.json
+        cat = Category.query.filter_by(name=data.get('category')).first()
+        if not cat:
+            return jsonify({"error": "Invalid category"}), 400
+            
+        pwd = data.get('password')
+        enc_pwd = encrypt_password(pwd) if pwd else None
+        
+        if not pwd and data.get('id'):
+            existing_check = HealthCheck.query.get(data.get('id'))
+            if existing_check:
+                enc_pwd = existing_check.encrypted_password
+                
+        temp_check = HealthCheck(
+            name="Test Connection",
+            category=cat,
+            host=data.get('host', 'localhost'),
+            target_path=data.get('target_path'),
+            search_pattern=data.get('search_pattern'),
+            ssh_user=data.get('ssh_user'),
+            ssh_key_path=data.get('ssh_key_path'),
+            os_type=data.get('os_type', 'linux'),
+            encrypted_password=enc_pwd
+        )
+        
+        status, message, metrics = runners.execute_check(temp_check)
+        return jsonify({
+            "status": status,
+            "message": message,
+            "metrics": metrics
+        })
+
     @app.route('/api/history', methods=['GET'])
     def get_history():
         # Get last 30 days of data
