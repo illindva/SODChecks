@@ -9,6 +9,10 @@ from models import HealthCheck
 from encryption_utils import decrypt_password
 
 class BaseCheckRunner:
+    """
+    Base class for all health check runners.
+    It provides the basic structure and a helper function to run commands locally or over SSH.
+    """
     def __init__(self, check: HealthCheck):
         self.check = check
 
@@ -17,12 +21,15 @@ class BaseCheckRunner:
         raise NotImplementedError("Subclasses must implement run()")
 
     def _execute_command(self, command: str) -> tuple:
-        """Executes a command locally or remotely via SSH based on the host.
-        Returns (stdout, stderr, return_code)
+        """
+        Executes a command locally or remotely via SSH based on the host.
+        Returns: (stdout, stderr, return_code)
         """
         host = self.check.host.lower()
+        
+        # Check if the host is local
         if host in ('localhost', '127.0.0.1', '0.0.0.0'):
-            # Local execution
+            # Run the command locally using Python's subprocess module
             try:
                 result = subprocess.run(
                     command, shell=True, 
@@ -33,7 +40,7 @@ class BaseCheckRunner:
             except Exception as e:
                 return "", str(e), -1
         else:
-            # Remote execution via SSH
+            # Run the command remotely via SSH
             try:
                 ssh = paramiko.SSHClient()
                 ssh.load_system_host_keys()
@@ -70,99 +77,83 @@ class BaseCheckRunner:
 class LogPatternCheckRunner(BaseCheckRunner):
     def run(self):
         """
-        Searches for a specific pattern in the target log file.
+        Searches for a specific pattern in the target log file on a Linux RHEL8 system.
         """
         pattern = self.check.search_pattern
         target = self.check.target_path
-        os_type = getattr(self.check, 'os_type', 'linux').lower()
         
         if not pattern or not target:
             return "ERROR", "Missing target path or search pattern.", {}
 
-        if os_type == 'windows':
-            ps_pattern = pattern.replace("'", "''")
-            cmd = f'powershell -Command "Get-Content -Path \'{target}\' -Tail 500 | Select-String -Pattern \'{ps_pattern}\' -Quiet"'
-        else:
-            safe_pattern = pattern.replace("'", "'\\''")
-            cmd = f"tail -n 500 {target} | grep -E '{safe_pattern}'"
+        # Escape single quotes so the command doesn't break in bash
+        safe_pattern = pattern.replace("'", "'\\''")
+        
+        # Command checks the last 500 lines of a file for the pattern
+        cmd = f"tail -n 500 {target} | grep -E '{safe_pattern}'"
         
         stdout, stderr, rc = self._execute_command(cmd)
         
-        if os_type == 'windows':
-            if "True" in stdout:
-                return "PASS", "Pattern found.", {"matched_line": "Found"}
-            elif rc != 0 or "False" in stdout:
-                if stderr.strip():
-                    return "ERROR", f"Failed to read log: {stderr}", {}
-                return "FAIL", "Pattern not found in the recent log entries.", {}
-            return "ERROR", f"Failed to read log.", {}
+        if rc == 0 and stdout.strip():
+            # Pattern was found successfully
+            lines = stdout.strip().split('\n')
+            matched_line = lines[-1] if lines else ""
+            return "PASS", "Pattern found.", {"matched_line": matched_line}
+        elif rc == 1:
+            # grep returns 1 if no lines match
+            return "FAIL", "Pattern not found in the recent log entries.", {}
         else:
-            if rc == 0 and stdout.strip():
-                lines = stdout.strip().split('\n')
-                matched_line = lines[-1] if lines else ""
-                return "PASS", f"Pattern found.", {"matched_line": matched_line}
-            elif rc == 1:
-                return "FAIL", "Pattern not found in the recent log entries.", {}
-            else:
-                return "ERROR", f"Failed to read log: {stderr}", {}
+            # Any other return code usually implies an error (e.g., file not found)
+            return "ERROR", f"Failed to read log: {stderr.strip()}", {}
 
 class ProcessCheckRunner(BaseCheckRunner):
     def run(self):
         """
-        Verifies process is running, gets uptime and memory consumption.
+        Verifies a process is running on Linux RHEL8, gets uptime and memory consumption.
+        The target can be a process ID (PID) or a process name.
         """
         target = self.check.target_path
-        os_type = getattr(self.check, 'os_type', 'linux').lower()
         
         if not target:
             return "ERROR", "Missing process name or PID.", {}
 
-        if os_type == 'windows':
-            if target.isdigit():
-                cmd = f'powershell -Command "Get-Process -Id {target} -ErrorAction SilentlyContinue | Select-Object Id, StartTime, WorkingSet | ConvertTo-Json"'
-            else:
-                cmd = f'powershell -Command "Get-Process -Name \'{target}\' -ErrorAction SilentlyContinue | Select-Object -First 1 Id, StartTime, WorkingSet | ConvertTo-Json"'
-            
-            stdout, stderr, rc = self._execute_command(cmd)
-            
-            if stdout and stdout.strip():
-                try:
-                    data = json.loads(stdout.strip())
-                    if not data:
-                        return "FAIL", f"Process '{target}' is not running.", {}
-                    pid = data.get('Id')
-                    memory_mb = round((data.get('WorkingSet', 0) or 0) / 1024 / 1024, 2)
-                    return "PASS", f"Process is running (PID: {pid}).", {"memory_mb": memory_mb}
-                except Exception as e:
-                    return "ERROR", f"Failed to parse process data: {e}", {}
-            return "FAIL", f"Process '{target}' is not running.", {}
+        # Check if target is just numbers (meaning it's a Process ID / PID)
+        if target.isdigit():
+            cmd = f"ps -p {target} -o pid=,etime=,rss="
         else:
-            if target.isdigit():
-                cmd = f"ps -p {target} -o pid=,etime=,rss="
-            else:
-                safe_target = target.replace("'", "'\\''")
-                cmd = f"ps -o pid=,etime=,rss= -p $(pgrep -f '{safe_target}') 2>/dev/null | head -n 1"
-            
-            stdout, stderr, rc = self._execute_command(cmd)
-            
-            if stdout and stdout.strip():
-                parts = stdout.strip().split()
-                if len(parts) >= 3:
-                    pid = parts[0]
-                    etime = parts[1]
-                    rss_kb = parts[2]
-                    try:
-                        memory_mb = round(int(rss_kb) / 1024, 2)
-                    except ValueError:
-                        memory_mb = 0
-                    return "PASS", f"Process is running (PID: {pid}).", {"uptime": etime, "memory_mb": memory_mb}
-            
+            # Target is a string (Process Name)
+            safe_target = target.replace("'", "'\\''")
+            cmd = f"ps -o pid=,etime=,rss= -p $(pgrep -f '{safe_target}') 2>/dev/null | head -n 1"
+        
+        # Execute the command
+        stdout, stderr, rc = self._execute_command(cmd)
+        
+        # Parse the output
+        if stdout and stdout.strip():
+            parts = stdout.strip().split()
+            # ps command outputs: PID, Elapsed Time (etime), Memory in KB (rss)
+            if len(parts) >= 3:
+                pid = parts[0]
+                etime = parts[1]
+                rss_kb = parts[2]
+                try:
+                    # Convert KB to MB for easier reading
+                    memory_mb = round(int(rss_kb) / 1024, 2)
+                except ValueError:
+                    memory_mb = 0
+                return "PASS", f"Process is running (PID: {pid}).", {"uptime": etime, "memory_mb": memory_mb}
+        
+        # Process not found
         return "FAIL", f"Process '{target}' is not running.", {}
 
 class EmailCheckRunner(BaseCheckRunner):
     def run(self):
-        # target_path can store comma separated emails
-        to_emails = [e.strip() for e in self.check.target_path.split(',') if e.strip()] if self.check.target_path else []
+        """
+        Sends an email with dashboard statistics.
+        """
+        # Parse comma-separated email addresses
+        target_emails = self.check.target_path
+        to_emails = [e.strip() for e in target_emails.split(',')] if target_emails else []
+        
         subject = self.check.name or "Dashboard Stats"
         body_html = "<h1>Dashboard Stats</h1><p>Placeholder for dashboard stats.</p>"
         
@@ -174,7 +165,9 @@ class EmailCheckRunner(BaseCheckRunner):
 
 class TeamsNotificationCheckRunner(BaseCheckRunner):
     def run(self):
-        # search_pattern can store the message text
+        """
+        Sends a notification to Microsoft Teams.
+        """
         message = self.check.search_pattern or "Teams Notification Sample"
         
         try:
@@ -185,6 +178,9 @@ class TeamsNotificationCheckRunner(BaseCheckRunner):
 
 class LinuxCommandCheckRunner(BaseCheckRunner):
     def run(self):
+        """
+        Runs any raw command directly on the Linux target host.
+        """
         host = self.check.host
         command = self.check.target_path
         user = self.check.ssh_user
@@ -202,6 +198,9 @@ class LinuxCommandCheckRunner(BaseCheckRunner):
 
 class WindowsCommandCheckRunner(BaseCheckRunner):
     def run(self):
+        """
+        Runs a command on a Windows target host using WinRM.
+        """
         host = self.check.host
         command = self.check.target_path
         user = self.check.ssh_user
@@ -221,7 +220,9 @@ class WindowsCommandCheckRunner(BaseCheckRunner):
 
 class JsonToHtmlCheckRunner(BaseCheckRunner):
     def run(self):
-        # search_pattern stores JSON string
+        """
+        Converts a JSON string into an HTML table.
+        """
         json_data = self.check.search_pattern
         if not json_data:
             return "ERROR", "No JSON data provided in search_pattern.", {}
@@ -234,7 +235,9 @@ class JsonToHtmlCheckRunner(BaseCheckRunner):
 
 class HtmlToJsonCheckRunner(BaseCheckRunner):
     def run(self):
-        # search_pattern stores HTML string
+        """
+        Converts an HTML table into a JSON string.
+        """
         html_data = self.check.search_pattern
         if not html_data:
             return "ERROR", "No HTML data provided in search_pattern.", {}
@@ -247,17 +250,18 @@ class HtmlToJsonCheckRunner(BaseCheckRunner):
 
 class OracleQueryCheckRunner(BaseCheckRunner):
     def run(self):
+        """
+        Connects to an Oracle DB and executes a query, returning an HTML table.
+        """
         host = self.check.host
-        # For db queries, host can be host:port. If port is separate or implied, we can parse it.
-        # Assuming format 'host:port' or just 'host' with default 1521
         port = "1521"
         if ":" in host:
             host, port = host.split(":", 1)
             
-        service_name = self.check.target_path # We'll use target_path for service_name
-        user = self.check.ssh_user # Database user
+        service_name = self.check.target_path
+        user = self.check.ssh_user
         pwd = decrypt_password(self.check.encrypted_password) if self.check.encrypted_password else None
-        query = self.check.search_pattern # The SQL query
+        query = self.check.search_pattern
         
         if not user or not pwd or not query or not service_name:
             return "ERROR", "Oracle check requires host, service_name (target_path), user, password, and query (search_pattern)", {}
@@ -270,12 +274,15 @@ class OracleQueryCheckRunner(BaseCheckRunner):
 
 class MssqlQueryCheckRunner(BaseCheckRunner):
     def run(self):
+        """
+        Connects to an MS SQL Server and executes a query, returning an HTML table.
+        """
         host = self.check.host
         port = "1433"
         if ":" in host:
             host, port = host.split(":", 1)
             
-        database = self.check.target_path # database name
+        database = self.check.target_path
         user = self.check.ssh_user 
         pwd = decrypt_password(self.check.encrypted_password) if self.check.encrypted_password else None
         query = self.check.search_pattern
@@ -291,8 +298,11 @@ class MssqlQueryCheckRunner(BaseCheckRunner):
 
 class SybaseQueryCheckRunner(BaseCheckRunner):
     def run(self):
+        """
+        Connects to a Sybase DB and executes a query, returning an HTML table.
+        """
         host = self.check.host
-        port = "5000" # Default sybase port
+        port = "5000"
         if ":" in host:
             host, port = host.split(":", 1)
             
@@ -312,6 +322,9 @@ class SybaseQueryCheckRunner(BaseCheckRunner):
 
 class GemfireOqlCheckRunner(BaseCheckRunner):
     def run(self):
+        """
+        Executes an OQL query via the GemFire REST API, returning an HTML table.
+        """
         host = self.check.host # Expected format: http://gemfire-rest-api:8080
         user = self.check.ssh_user 
         pwd = decrypt_password(self.check.encrypted_password) if self.check.encrypted_password else None
@@ -358,3 +371,4 @@ def execute_check(check: HealthCheck):
         return "ERROR", f"Unknown category: {category_name}", {}
         
     return runner.run()
+
